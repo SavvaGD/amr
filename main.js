@@ -2,7 +2,7 @@ const TelegramBot = require('node-telegram-bot-api');
 const bamo = require('./bamo');
 const moto = require('./moto');
 
-const TOKEN = '8688529735:AAFrLF9vyImuCj4zHQkka-NWEgpj2gypipc';
+const TOKEN = process.env.TELEGRAM_TOKEN;
 
 // Прямое подключение без зеркал (исправляем экранирование)
 const bot = new TelegramBot(TOKEN, { 
