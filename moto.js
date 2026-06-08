@@ -1,29 +1,30 @@
-// Простая проверка соответствия теме (можно улучшить через ИИ или ключевые слова)
-function checkTopic(text, topic) {
-    const lowerText = text.toLowerCase();
-    const lowerTopic = topic.toLowerCase();
-    
-    // Разбиваем тему на ключевые слова
-    const keywords = lowerTopic.split(/\s+/);
-    
-    // Проверяем, есть ли хотя бы одно ключевое слово
-    const hasKeyword = keywords.some(keyword => lowerText.includes(keyword));
-    
-    if (!hasKeyword) {
-        return { 
-            isRelevant: false, 
-            suggestion: `Пожалуйста, пишите сообщения на тему "${topic}"` 
-        };
+const aiTopic = require('./aiTopic');
+
+const chatHistory = new Map();
+
+function addToHistory(chatId, userId, text) {
+    if (!chatHistory.has(chatId)) {
+        chatHistory.set(chatId, []);
     }
+    const history = chatHistory.get(chatId);
+    history.push({ userId, text, timestamp: Date.now() });
     
-    return { isRelevant: true };
+    while (history.length > 20) history.shift();
 }
 
-// Расширенная версия с запрещёнными темами (опционально)
-const forbiddenTopics = ['политика', 'религия', '18+'];
-function isForbiddenTopic(text) {
-    const lower = text.toLowerCase();
-    return forbiddenTopics.some(topic => lower.includes(topic));
+function getHistoryContext(chatId) {
+    const history = chatHistory.get(chatId) || [];
+    return history.slice(-10).map(msg => msg.text);
 }
 
-module.exports = { checkTopic, isForbiddenTopic };
+function clearHistory(chatId) {
+    chatHistory.delete(chatId);
+}
+
+async function checkTopic(text, topic, chatId) {
+    const history = getHistoryContext(chatId);
+    const result = await aiTopic.isRelatedToTopic(text, topic, history);
+    return result;
+}
+
+module.exports = { checkTopic, addToHistory, clearHistory, getHistoryContext };
