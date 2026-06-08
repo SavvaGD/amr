@@ -5,8 +5,7 @@ const moto = require('./moto');
 const TOKEN = process.env.TELEGRAM_TOKEN;
 
 const bot = new TelegramBot(TOKEN, { 
-    polling: true,
-    baseApiUrl: 'https://api.telegram.org.kg'
+    polling: true
 });
 
 // Хранилища
