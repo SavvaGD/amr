@@ -2,14 +2,10 @@ const TelegramBot = require('node-telegram-bot-api');
 const bamo = require('./bamo');
 const moto = require('./moto');
 
-const TOKEN = process.env.TELEGRAM_TOKEN;
+const TOKEN = process.env.TELEGRAM_TOKEN || '8688529735:AAFrLF9vyImuCj4zHQkka-NWEgpj2gypipc';
 
-// Прямое подключение без зеркал (исправляем экранирование)
-const bot = new TelegramBot(TOKEN, { 
-    polling: true 
-});
+const bot = new TelegramBot(TOKEN, { polling: true });
 
-// Хранилища
 const chatModes = new Map();
 const chatTopics = new Map();
 const chatLocks = new Map();
@@ -26,7 +22,7 @@ async function isAdmin(chatId, userId) {
 async function setChatMode(chatId, userId, mode, topic = null) {
     if (chatLocks.get(chatId)) {
         if (!await isAdmin(chatId, userId)) {
-            bot.sendMessage(chatId, '❌ Режим модерации заблокирован администратором!');
+            bot.sendMessage(chatId, '❌ Режим заблокирован админом!');
             return false;
         }
     }
@@ -34,13 +30,13 @@ async function setChatMode(chatId, userId, mode, topic = null) {
     chatModes.set(chatId, mode);
     if (mode === 'moto' && topic) {
         chatTopics.set(chatId, topic);
-        bot.sendMessage(chatId, `✅ Режим MODERATION WITH TOPIC\n📌 Тема: ${topic}`);
+        bot.sendMessage(chatId, `✅ Тема: ${topic}`);
     } else if (mode === 'bamo') {
         chatTopics.delete(chatId);
-        bot.sendMessage(chatId, '✅ Режим BASIC MODERATION');
+        bot.sendMessage(chatId, '✅ Базовая модерация');
     } else if (mode === 'wimo') {
         chatTopics.delete(chatId);
-        bot.sendMessage(chatId, '✅ Режим WITHOUT MODERATION');
+        bot.sendMessage(chatId, '✅ Без модерации');
     }
     return true;
 }
@@ -53,35 +49,47 @@ bot.on('message', async (msg) => {
     if (text.startsWith('/')) {
         const command = text.split(' ')[0];
         
-        if (command === '/wimo') {
-            await setChatMode(chatId, userId, 'wimo');
+        // Новая команда /start
+        if (command === '/start') {
+            bot.sendMessage(chatId, `
+🤖 *Бот-модератор*
+
+*Команды:*
+/wimo — Без модерации
+/bamo — Базовая модерация
+/moto [тема] — Модерация с ограниченными темами
+/lomo — Заблокировать смену режима (админы)
+/unlomo — Разблокировать смену режима (админы)
+
+*Правила:*
+1. Без мата
+2. Без спама
+3. Без рекламы
+4. Без кибербуллинга
+
+✅ Бот активен
+`, { parse_mode: 'Markdown' });
+            return;
         }
-        else if (command === '/bamo') {
-            await setChatMode(chatId, userId, 'bamo');
-        }
+        
+        if (command === '/wimo') await setChatMode(chatId, userId, 'wimo');
+        else if (command === '/bamo') await setChatMode(chatId, userId, 'bamo');
         else if (command === '/moto') {
             const topic = text.slice(6).trim();
-            if (!topic) {
-                bot.sendMessage(chatId, '⚠️ Укажите тему: /moto [тема]');
-                return;
-            }
+            if (!topic) return bot.sendMessage(chatId, '⚠️ /moto [тема]');
             await setChatMode(chatId, userId, 'moto', topic);
         }
         else if (command === '/lomo') {
             if (await isAdmin(chatId, userId)) {
                 chatLocks.set(chatId, true);
-                bot.sendMessage(chatId, '🔒 Режим модерации ЗАБЛОКИРОВАН');
-            } else {
-                bot.sendMessage(chatId, '⛔ Только для администраторов!');
-            }
+                bot.sendMessage(chatId, '🔒 Режим заблокирован');
+            } else bot.sendMessage(chatId, '⛔ Не админ');
         }
         else if (command === '/unlomo') {
             if (await isAdmin(chatId, userId)) {
                 chatLocks.set(chatId, false);
-                bot.sendMessage(chatId, '🔓 Режим модерации РАЗБЛОКИРОВАН');
-            } else {
-                bot.sendMessage(chatId, '⛔ Только для администраторов!');
-            }
+                bot.sendMessage(chatId, '🔓 Режим разблокирован');
+            } else bot.sendMessage(chatId, '⛔ Не админ');
         }
         return;
     }
@@ -104,7 +112,7 @@ bot.on('message', async (msg) => {
         if (!topicCheck.isRelevant) {
             try {
                 await bot.deleteMessage(chatId, msg.message_id);
-                bot.sendMessage(chatId, `🚫 Не соответствует теме "${topic}"`);
+                bot.sendMessage(chatId, `🚫 Не тема "${topic}"`);
             } catch (err) {}
         }
     }
@@ -114,4 +122,4 @@ bot.on('polling_error', (error) => {
     console.log('Ошибка:', error.message);
 });
 
-console.log('🤖 Бот запущен');
+console.log('🤖 Бот-модератор запущен');
