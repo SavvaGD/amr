@@ -4,9 +4,10 @@ let zeroShotClassifier = null;
 
 async function loadClassifier() {
     if (!zeroShotClassifier) {
-        console.log('🔄 Загрузка нейросети для тематической модерации...');
-        zeroShotClassifier = await pipeline('zero-shot-classification', 'Xenova/nli-deberta-v3-xsmall');
-        console.log('✅ Нейросеть для тем загружена');
+        console.log('🔄 Загрузка мультиязычной модели для тем...');
+        // Multilingual модель работает с русским, английским и др.
+        zeroShotClassifier = await pipeline('zero-shot-classification', 'Xenova/multilingual-e5-small');
+        console.log('✅ Мультиязычная модель загружена');
     }
     return zeroShotClassifier;
 }
@@ -15,16 +16,14 @@ async function isRelatedToTopic(text, topic, history = []) {
     try {
         const model = await loadClassifier();
         
-        // Формируем контекст (сообщение + история)
         const context = [...history, text].join(' ').slice(0, 1000);
         
-        // Zero-shot классификация
         const result = await model(context, [topic], {
             hypothesis_template: "Это сообщение относится к теме: {}."
         });
         
         const confidence = result.scores[0];
-        const isRelevant = confidence > 0.55; // порог 55%
+        const isRelevant = confidence > 0.55;
         
         return {
             isRelevant: isRelevant,
@@ -32,8 +31,7 @@ async function isRelatedToTopic(text, topic, history = []) {
             reason: isRelevant ? `✅ (${Math.round(confidence * 100)}%)` : `❌ (${Math.round(confidence * 100)}%)`
         };
     } catch (err) {
-        console.error('Ошибка нейросети темы:', err);
-        // Fallback на ключевые слова
+        console.error('Ошибка нейросети:', err);
         const keywords = topic.toLowerCase().split(' ');
         const hasKeyword = keywords.some(kw => text.toLowerCase().includes(kw));
         return {
